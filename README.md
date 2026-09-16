@@ -4,12 +4,15 @@
 >
 > 核心思路：把一栋建筑拆成可复用的 **模块（Module）**，再用一条 **形状语法（Shape Grammar）** 描述
 > "每一层由哪些模块、按什么顺序、以什么概率排列"，剩下的排版、随机变化、模块贴合、屋顶生成全部交给节点完成。
+>
+> **本资产改编自 Houdini 官方 SideFX Labs 的 `Labs Building from Patterns` 节点**（详见 [来源与改编说明](#来源与改编说明)）。
 
 ---
 
 ## 目录
 
 - [这是什么](#这是什么)
+- [来源与改编说明](#来源与改编说明)
 - [仓库内容](#仓库内容)
 - [环境要求](#环境要求)
 - [安装方法](#安装方法)
@@ -41,6 +44,36 @@ Houdini 里搭建筑通常有两种做法：手工摆件，或者写一堆循环
 
 ---
 
+## 来源与改编说明
+
+本仓库的资产**并非从零编写**，而是在 Houdini **官方（SideFX Labs）** 节点的基础上**改编并扩展**而来：
+
+| 官方节点 | 官方定位 | 与本资产的关系 |
+| --- | --- | --- |
+| **`Labs Building from Patterns`** | *Creates buildings from blockout geometry defined by a pattern of floor modules.* —— 用"楼层模块的排列规则"从体块生成建筑 | **主要改编来源**。本生成器的形状语法思路、`Floor Descriptions`（楼层描述）、体块驱动的工作流与术语体系均沿用自它 |
+| **`Labs Building Generator Utility`** | *Creates and configures building modules.* —— 制作并配置建筑模块 | 本资产**内部直接调用**（`labs::building_generator_utility::2.0`）来做模块注册 |
+| **`Labs Align and Distribute`** | 把几何体按线性 / 网格排布 | 本资产**内部直接调用**（`labs::align_and_distribute::2.0`）做模块对齐与分布 |
+
+具体来说，[Building Generator LOP](#1-building-generator-lop--floors) 可以理解为
+**官方 `Labs Building from Patterns` 的 Solaris / LOP 版本，并在其基础上做了大幅扩展**：
+
+- **沿用**：形状语法的规则表达方式（`[Base]<Wall>` 这类规则 + 展开式）、
+  `Floor Descriptions` 楼层描述、体块（Blockout）驱动、模块注册（Module Register）这一整套思路与术语；
+- **扩展**：楼层与模块的**权重 / 随机变体**、模块级尺寸覆盖、**成对重叠（Pair Overlap）**、
+  整体转角与转角优先级、由外部 SOP 驱动的楼层描述 / 开洞 / 楼层覆盖、
+  屋顶面独立输出，以及配套的 USD 模块标注与 USD 重建重命名工具；
+- **移植**：从 SOP / 几何上下文迁移到 **Solaris（LOP）/ USD** 上下文，最终产物直接是 USD 而非几何体。
+
+> 资产内部还留有 `WanX::building_from_patterns_overlap::1.0` 这类定义，
+> 从命名上即可看出它与官方 `Building from Patterns` 的传承关系。
+
+**因此 SideFX Labs 是本资产的必需依赖，而不是可选项。**
+
+> 版权说明：上游 SideFX Labs 节点及相关代码的版权归 SideFX 所有，遵循其自带许可；
+> 本仓库的 MIT 协议仅覆盖本资产中作者自有的部分。
+
+---
+
 ## 仓库内容
 
 本仓库只包含可用的 HDA 资产本体，不含任何运行期几何数据或项目文件。
@@ -62,11 +95,13 @@ Houdini 里搭建筑通常有两种做法：手工摆件，或者写一堆循环
 | --- | --- |
 | Houdini | **22.0.368**（开发版本；其它 22.x 通常也可用） |
 | 工作流 | Solaris / LOP（USD），需要启用 `pxr` Python 模块 |
-| 第三方节点 | **SideFX Labs**（`labs::align_and_distribute::2.0`、`labs::building_generator_utility::2.0`） |
+| 依赖 | **SideFX Labs** —— 本资产的改编基础，**必需**（见 [来源与改编说明](#来源与改编说明)） |
 | 平台 | Windows / Linux / macOS 均可（开发环境为 Windows） |
 
-> `WanX_Building_Generator_FINAL.hda` 内部的 `PROCESS` 子网引用了 SideFX Labs 的 SOP 节点。
-> 如果没装 Labs，生成器主体逻辑仍可用，但内置的模块对齐/注册分支会报缺失节点。
+> **SideFX Labs 是必需依赖**，不只是"顺手引用几个节点"：本资产正是从 Labs 的
+> `Building from Patterns` / `Building Generator Utility` 改编而来，
+> 内部直接调用了 `labs::building_generator_utility::2.0` 与 `labs::align_and_distribute::2.0`。
+> 未安装 Labs 时，模块注册与对齐分支会报缺失节点。
 
 ---
 
@@ -259,6 +294,10 @@ MIT License，详见 [LICENSE](LICENSE)。
 
 A Houdini 22 / Solaris (LOP) toolkit for **procedural building generation driven by a shape grammar**.
 
+This asset set is **adapted and extended from the official SideFX Labs
+`Labs Building from Patterns` node** (together with `Labs Building Generator Utility`),
+rather than written from scratch — see the 来源与改编说明 section above for the breakdown.
+
 - **`WanX_Building_Generator_FINAL.hda`** — the main asset library:
   - `building_generator_lop` — reads a USD blockout plus a module library, expands a shape-grammar
     pattern (e.g. `[Base]<Wall>`) per floor, places/rotates/overlaps modules, and emits a full building
@@ -268,6 +307,8 @@ A Houdini 22 / Solaris (LOP) toolkit for **procedural building generation driven
 - **`lop_WanX--USB_Rebulit_and_Rename-1.0.hda`** — preparation asset: rebuilds an external USD hierarchy,
   renames its root to `/ShapeGrammar`, authors stable module metadata, and repairs meshes that lack normals.
 
-Requires Houdini 22 (developed on 22.0.368), the Solaris/LOP context, and SideFX Labs for a couple of
-internal utility nodes. Install via `File ▸ Install Digital Asset Library…` or by dropping the `.hda`
+Requires Houdini 22 (developed on 22.0.368), the Solaris/LOP context, and **SideFX Labs** — the official
+`Labs Building from Patterns` / `Labs Building Generator Utility` nodes are the foundation this asset was
+adapted from, and several Labs utility nodes are called directly. Install via
+`File ▸ Install Digital Asset Library…` or by dropping the `.hda`
 files into `$HOUDINI_USER_PREF_DIR/otls/`.
