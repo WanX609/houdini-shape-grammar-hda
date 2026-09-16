@@ -11,6 +11,9 @@
 backup/
 tmp/
 
+# 本项目的 WorkBuddy 工作数据（非资产内容）
+.workbuddy/
+
 # 编辑器 / 系统
 .DS_Store
 Thumbs.db
